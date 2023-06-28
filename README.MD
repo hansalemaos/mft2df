@@ -23,7 +23,16 @@ It can be particularly useful for tasks such as file system analysis, data explo
 
 
 ```python
-
+Args:
+    drive (str): The drive letter to retrieve the files from. Default is "c".
+    convert_dates (bool): Whether to use pd.to_datetime to convert "FileNameLastModified", "FileNameLastAccess",
+                           "FileNameCreated","StandardInfoLastModified","StandardInfoLastAccess","StandardInfoCreated"
+                          (Parsing takes about 2x longer, and the resulting DataFrame is about 30% bigger)
+Returns:
+    pd.DataFrame: A DataFrame containing the list of files retrieved from the drive.
+Raises:
+    None
+    
 # Important: you need admin rights!!!!
 from mft2df import list_files_from_drive
 from time import perf_counter

@@ -37,19 +37,22 @@ def get_tmpfile(suffix: str = ".pqt") -> str:
     return filename
 
 
-def list_files_from_drive(drive: str = "c") -> pd.DataFrame:
+def list_files_from_drive(drive: str = "c", convert_dates: bool = True) -> pd.DataFrame:
     """
-        Retrieves a list of files from a specified drive and returns the results as a pandas DataFrame.
+    Retrieves a list of files from a specified drive and returns the results as a pandas DataFrame.
 
-        Args:
-            drive (str): The drive letter to retrieve the files from. Default is "c".
+    Args:
+        drive (str): The drive letter to retrieve the files from. Default is "c".
+        convert_dates (bool): Whether to use pd.to_datetime to convert "FileNameLastModified", "FileNameLastAccess",
+                               "FileNameCreated","StandardInfoLastModified","StandardInfoLastAccess","StandardInfoCreated"
+                              (Parsing takes about 2x longer, and the resulting DataFrame is about 30% bigger)
 
-        Returns:
-            pd.DataFrame: A DataFrame containing the list of files retrieved from the drive.
+    Returns:
+        pd.DataFrame: A DataFrame containing the list of files retrieved from the drive.
 
-        Raises:
-            None
-        """
+    Raises:
+        None
+    """
     drive_re = re.findall(r"[a-z]+", drive, flags=re.I)[0].lower()
     mfttmpfile = get_tmpfile(".file")
     dumpcommand = [createdump, "dump", drive_re, f"{mfttmpfile}"]
@@ -92,8 +95,6 @@ def list_files_from_drive(drive: str = "c") -> pd.DataFrame:
             "FileNameCreated",
             "FullPath",
         ],
-        parse_dates=["FileNameLastModified", "FileNameLastAccess", "FileNameCreated"],
-        date_format="%Y-%m-%dT%H:%M:%S.%fZ",
         dtype={
             "Signature": "category",
             "EntryId": "uint32",
@@ -113,25 +114,37 @@ def list_files_from_drive(drive: str = "c") -> pd.DataFrame:
             "StandardInfoLastAccess": "string",
             "StandardInfoCreated": "string",
             "FileNameFlags": "category",
-            # "FileNameLastModified":"string",
-            # "FileNameLastAccess":"string",
-            # "FileNameCreated":"string",
+            "FileNameLastModified": "string",
+            "FileNameLastAccess": "string",
+            "FileNameCreated": "string",
             "FullPath": "string",
         },
         engine="c",
-        cache_dates=True,
         low_memory=True,
     )
+
     df = df.dropna(subset="FullPath")
     gc.collect()
     df.loc[df.index, "FullPath"] = f"{drive_re}:\\" + df.FullPath
     df = df.reset_index(drop=True)
     gc.collect()
-
+    if convert_dates:
+        dateformat = "%Y-%m-%dT%H:%M:%S.%fZ"
+        datecols = [
+            "FileNameLastModified",
+            "FileNameLastAccess",
+            "FileNameCreated",
+            "StandardInfoLastModified",
+            "StandardInfoLastAccess",
+            "StandardInfoCreated",
+        ]
+        for datecol in datecols:
+            df[datecol] = pd.to_datetime(
+                df[datecol], errors="coerce", format=dateformat
+            )
+            gc.collect()
     try:
         os.remove(mfttmpfile)
     except Exception as fe:
         print(fe)
     return df
-
-

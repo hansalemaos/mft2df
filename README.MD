@@ -52,3 +52,37 @@ print(df[200060:200066].to_string())
 # 200065      FILE   202519         1            0                  0              2  ALLOCATED            672            1024       211         False      False                    False           (empty)  2020-03-04T10:38:59.042535Z  2020-03-04T10:38:59.042535Z  2020-03-04T10:39:00.794664Z  FILE_ATTRIBUTE_ARCHIVE  2020-03-04T10:38:59.042535Z  2020-03-04T10:38:59.042535Z  2020-03-04T10:38:59.042535Z    c:\Windows\WinSxS\Manifests\amd64_wpdmtphw.inf-languagepack_31bf3856ad364e35_10.0.18362.1_de-de_52e461d8f91111b2.manifest
 
 ```
+
+## Examples
+
+### Finds all python files on your HDD that contain the string "ctypes" in less than 2 minutes
+
+```python
+import pandas as pd
+from PrettyColorPrinter import add_printer # pip install PrettyColorPrinter
+add_printer(1)
+from mft2df import list_files_from_drive
+from time import perf_counter
+
+start = perf_counter()
+df = list_files_from_drive(drive="c", convert_dates=False)
+print(f"Time needed: {perf_counter() - start} " f"for {len(df)} files")
+
+
+def regex_search(file):
+    try:
+        with open(file, mode="r", encoding="utf-8") as f:
+            data = f.read()
+
+    except Exception:
+        data = pd.NA
+    return data
+
+
+dffi = df.loc[
+    (df.FullPath.str.endswith(".py")) & (~df.IsDeleted) & (~df.IsADirectory)
+].copy()
+dffi["FileContent"] = dffi.FullPath.apply(regex_search)
+dffi = dffi.loc[~dffi["FileContent"].isna()]
+ctypesfiles = dffi.loc[dffi.FileContent.str.contains("ctypes")]
+```

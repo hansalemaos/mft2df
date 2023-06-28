@@ -69,7 +69,7 @@ df = list_files_from_drive(drive="c", convert_dates=False)
 print(f"Time needed: {perf_counter() - start} " f"for {len(df)} files")
 
 
-def regex_search(file):
+def get_content(file):
     try:
         with open(file, mode="r", encoding="utf-8") as f:
             data = f.read()
@@ -82,7 +82,7 @@ def regex_search(file):
 dffi = df.loc[
     (df.FullPath.str.endswith(".py")) & (~df.IsDeleted) & (~df.IsADirectory)
 ].copy()
-dffi["FileContent"] = dffi.FullPath.apply(regex_search)
+dffi["FileContent"] = dffi.FullPath.apply(get_content)
 dffi = dffi.loc[~dffi["FileContent"].isna()]
 ctypesfiles = dffi.loc[dffi.FileContent.str.contains("ctypes")]
 ```
